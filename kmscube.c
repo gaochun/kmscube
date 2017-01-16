@@ -42,6 +42,7 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
+#include <json.h>
 #include "esUtil.h"
 
 
@@ -75,6 +76,16 @@ struct drm_fb {
 	struct gbm_bo *bo;
 	uint32_t fb_id;
 };
+
+
+GLfloat *vVertices = NULL;
+GLfloat *vColors = NULL;
+GLfloat *vNormals = NULL;
+int vertices_size;
+int colors_size;
+int normals_size;
+char const *vertex_shader_source = NULL;
+char const *fragment_shader_source = NULL;
 
 static uint32_t find_crtc_for_encoder(const drmModeRes *resources,
 				      const drmModeEncoder *encoder) {
@@ -239,110 +250,86 @@ static int init_gbm(void)
 	return 0;
 }
 
+
+static int read_configuration()
+{
+	const char *filename = "./test.json";
+
+	json_object *jso = NULL;
+        jso = json_object_from_file(filename);
+	if (jso == NULL)
+	{
+		return 1;
+	}
+
+	json_object_object_foreach(jso, key, val)
+	{
+		if (strcmp(key, "vertices") == 0)
+		{
+			struct array_list* arr = json_object_get_array(val);
+			int len = json_object_array_length(val);
+			vertices_size = sizeof(GLfloat)*len;
+			if (len > 0)
+				vVertices = (GLfloat*)malloc(vertices_size);
+			for(int i = 0; i < len; i++)
+			{
+				struct json_object* obj = (struct json_object*)array_list_get_idx(arr, i);
+				vVertices[i] = (GLfloat)json_object_get_double(obj);
+			}
+		}
+		else if (strcmp(key, "colors") == 0)
+		{
+			struct array_list* arr = json_object_get_array(val);
+			int len = json_object_array_length(val);
+			colors_size = sizeof(GLfloat)*len;
+			if (len > 0)
+				vColors = (GLfloat*)malloc(colors_size);
+			for(int i = 0; i < len; i++)
+			{
+				struct json_object* obj = (struct json_object*)array_list_get_idx(arr, i);
+				vColors[i] = (GLfloat)json_object_get_double(obj);
+			}
+		}
+		else if (strcmp(key, "normals") == 0)
+		{
+			struct array_list* arr = json_object_get_array(val);
+			int len = json_object_array_length(val);
+			normals_size = sizeof(GLfloat)*len;
+			if (len > 0)
+				vNormals = (GLfloat*)malloc(normals_size);
+			for(int i = 0; i < len; i++)
+			{
+				struct json_object* obj = (struct json_object*)array_list_get_idx(arr, i);
+				vNormals[i] = (GLfloat)json_object_get_double(obj);
+			}
+		}
+		else if (strcmp(key, "vertex_shader_source") == 0)
+		{
+			const char* str = json_object_get_string(val);
+			vertex_shader_source = str;
+		}
+		else if (strcmp(key, "fragment_shader_source") == 0)
+		{
+			const char* str = json_object_get_string(val);
+			fragment_shader_source = str;
+		}
+	}
+
+
+	if (vVertices == NULL || vColors == NULL || vNormals == NULL)
+	{
+		return 1;
+	}
+
+	return 0;
+
+}
+
 static int init_gl(void)
 {
 	EGLint major, minor, n;
 	GLuint vertex_shader, fragment_shader;
 	GLint ret;
-
-	static const GLfloat vVertices[] = {
-			// front
-			-1.0f, -1.0f, +1.0f,
-			+1.0f, -1.0f, +1.0f,
-			-1.0f, +1.0f, +1.0f,
-			+1.0f, +1.0f, +1.0f,
-			// back
-			+1.0f, -1.0f, -1.0f,
-			-1.0f, -1.0f, -1.0f,
-			+1.0f, +1.0f, -1.0f,
-			-1.0f, +1.0f, -1.0f,
-			// right
-			+1.0f, -1.0f, +1.0f,
-			+1.0f, -1.0f, -1.0f,
-			+1.0f, +1.0f, +1.0f,
-			+1.0f, +1.0f, -1.0f,
-			// left
-			-1.0f, -1.0f, -1.0f,
-			-1.0f, -1.0f, +1.0f,
-			-1.0f, +1.0f, -1.0f,
-			-1.0f, +1.0f, +1.0f,
-			// top
-			-1.0f, +1.0f, +1.0f,
-			+1.0f, +1.0f, +1.0f,
-			-1.0f, +1.0f, -1.0f,
-			+1.0f, +1.0f, -1.0f,
-			// bottom
-			-1.0f, -1.0f, -1.0f,
-			+1.0f, -1.0f, -1.0f,
-			-1.0f, -1.0f, +1.0f,
-			+1.0f, -1.0f, +1.0f,
-	};
-
-	static const GLfloat vColors[] = {
-			// front
-			0.0f,  0.0f,  1.0f, // blue
-			1.0f,  0.0f,  1.0f, // magenta
-			0.0f,  1.0f,  1.0f, // cyan
-			1.0f,  1.0f,  1.0f, // white
-			// back
-			1.0f,  0.0f,  0.0f, // red
-			0.0f,  0.0f,  0.0f, // black
-			1.0f,  1.0f,  0.0f, // yellow
-			0.0f,  1.0f,  0.0f, // green
-			// right
-			1.0f,  0.0f,  1.0f, // magenta
-			1.0f,  0.0f,  0.0f, // red
-			1.0f,  1.0f,  1.0f, // white
-			1.0f,  1.0f,  0.0f, // yellow
-			// left
-			0.0f,  0.0f,  0.0f, // black
-			0.0f,  0.0f,  1.0f, // blue
-			0.0f,  1.0f,  0.0f, // green
-			0.0f,  1.0f,  1.0f, // cyan
-			// top
-			0.0f,  1.0f,  1.0f, // cyan
-			1.0f,  1.0f,  1.0f, // white
-			0.0f,  1.0f,  0.0f, // green
-			1.0f,  1.0f,  0.0f, // yellow
-			// bottom
-			0.0f,  0.0f,  0.0f, // black
-			1.0f,  0.0f,  0.0f, // red
-			0.0f,  0.0f,  1.0f, // blue
-			1.0f,  0.0f,  1.0f  // magenta
-	};
-
-	static const GLfloat vNormals[] = {
-			// front
-			+0.0f, +0.0f, +1.0f, // forward
-			+0.0f, +0.0f, +1.0f, // forward
-			+0.0f, +0.0f, +1.0f, // forward
-			+0.0f, +0.0f, +1.0f, // forward
-			// back
-			+0.0f, +0.0f, -1.0f, // backward
-			+0.0f, +0.0f, -1.0f, // backward
-			+0.0f, +0.0f, -1.0f, // backward
-			+0.0f, +0.0f, -1.0f, // backward
-			// right
-			+1.0f, +0.0f, +0.0f, // right
-			+1.0f, +0.0f, +0.0f, // right
-			+1.0f, +0.0f, +0.0f, // right
-			+1.0f, +0.0f, +0.0f, // right
-			// left
-			-1.0f, +0.0f, +0.0f, // left
-			-1.0f, +0.0f, +0.0f, // left
-			-1.0f, +0.0f, +0.0f, // left
-			-1.0f, +0.0f, +0.0f, // left
-			// top
-			+0.0f, +1.0f, +0.0f, // up
-			+0.0f, +1.0f, +0.0f, // up
-			+0.0f, +1.0f, +0.0f, // up
-			+0.0f, +1.0f, +0.0f, // up
-			// bottom
-			+0.0f, -1.0f, +0.0f, // down
-			+0.0f, -1.0f, +0.0f, // down
-			+0.0f, -1.0f, +0.0f, // down
-			+0.0f, -1.0f, +0.0f  // down
-	};
 
 	static const EGLint context_attribs[] = {
 		EGL_CONTEXT_CLIENT_VERSION, 2,
@@ -358,40 +345,6 @@ static int init_gl(void)
 		EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
 		EGL_NONE
 	};
-
-	static const char *vertex_shader_source =
-			"uniform mat4 modelviewMatrix;      \n"
-			"uniform mat4 modelviewprojectionMatrix;\n"
-			"uniform mat3 normalMatrix;         \n"
-			"                                   \n"
-			"attribute vec4 in_position;        \n"
-			"attribute vec3 in_normal;          \n"
-			"attribute vec4 in_color;           \n"
-			"\n"
-			"vec4 lightSource = vec4(2.0, 2.0, 20.0, 0.0);\n"
-			"                                   \n"
-			"varying vec4 vVaryingColor;        \n"
-			"                                   \n"
-			"void main()                        \n"
-			"{                                  \n"
-			"    gl_Position = modelviewprojectionMatrix * in_position;\n"
-			"    vec3 vEyeNormal = normalMatrix * in_normal;\n"
-			"    vec4 vPosition4 = modelviewMatrix * in_position;\n"
-			"    vec3 vPosition3 = vPosition4.xyz / vPosition4.w;\n"
-			"    vec3 vLightDir = normalize(lightSource.xyz - vPosition3);\n"
-			"    float diff = max(0.0, dot(vEyeNormal, vLightDir));\n"
-			"    vVaryingColor = vec4(diff * in_color.rgb, 1.0);\n"
-			"}                                  \n";
-
-	static const char *fragment_shader_source =
-			"precision mediump float;           \n"
-			"                                   \n"
-			"varying vec4 vVaryingColor;        \n"
-			"                                   \n"
-			"void main()                        \n"
-			"{                                  \n"
-			"    gl_FragColor = vVaryingColor;  \n"
-			"}                                  \n";
 
 	gl.display = eglGetDisplay(gbm.dev);
 
@@ -513,14 +466,14 @@ static int init_gl(void)
 	glEnable(GL_CULL_FACE);
 
 	gl.positionsoffset = 0;
-	gl.colorsoffset = sizeof(vVertices);
-	gl.normalsoffset = sizeof(vVertices) + sizeof(vColors);
+	gl.colorsoffset = vertices_size;
+	gl.normalsoffset = vertices_size + colors_size;
 	glGenBuffers(1, &gl.vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, gl.vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vVertices) + sizeof(vColors) + sizeof(vNormals), 0, GL_STATIC_DRAW);
-	glBufferSubData(GL_ARRAY_BUFFER, gl.positionsoffset, sizeof(vVertices), &vVertices[0]);
-	glBufferSubData(GL_ARRAY_BUFFER, gl.colorsoffset, sizeof(vColors), &vColors[0]);
-	glBufferSubData(GL_ARRAY_BUFFER, gl.normalsoffset, sizeof(vNormals), &vNormals[0]);
+	glBufferData(GL_ARRAY_BUFFER, vertices_size + colors_size + normals_size, 0, GL_STATIC_DRAW);
+	glBufferSubData(GL_ARRAY_BUFFER, gl.positionsoffset, vertices_size, &vVertices[0]);
+	glBufferSubData(GL_ARRAY_BUFFER, gl.colorsoffset, colors_size, &vColors[0]);
+	glBufferSubData(GL_ARRAY_BUFFER, gl.normalsoffset, normals_size, &vNormals[0]);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (const GLvoid *)(intptr_t)gl.positionsoffset);
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (const GLvoid *)(intptr_t)gl.normalsoffset);
@@ -637,6 +590,12 @@ int main(int argc, char *argv[])
 	struct drm_fb *fb;
 	uint32_t i = 0;
 	int ret;
+
+	ret = read_configuration();
+	if (ret) {
+		printf("failed to read JSON data\n");
+		return ret;
+	}
 
 	ret = init_drm();
 	if (ret) {
