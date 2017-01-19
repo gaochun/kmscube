@@ -39,11 +39,9 @@ kmscube_CFLAGS = \
 	$(EGL_CFLAGS) \
 	$(GLES2_CFLAGS)
 
-LDFLAGS = \
-	$(shell pkg-config --libs json-c)
+LDFLAGS = -L./third_party/json-c -ljson-c
 
-CFLAGS = \
-	$(shell pkg-config --cflags json-c)
+CFLAGS = -I./third_party/json-c
 
 kmscube_SOURCES = \
 	kmscube.c \
