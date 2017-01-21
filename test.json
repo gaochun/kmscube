@@ -1,100 +1,43 @@
-{
-  "vertices": [
-			// front
-			-1.0, -1.0,  1.0,
-			 1.0, -1.0,  1.0,
-			-1.0,  1.0,  1.0,
-			 1.0,  1.0,  1.0,
-			// back
-			 1.0, -1.0, -1.0,
-			-1.0, -1.0, -1.0,
-			 1.0,  1.0, -1.0,
-			-1.0,  1.0, -1.0,
-			// right
-			 1.0, -1.0,  1.0,
-			 1.0, -1.0, -1.0,
-			 1.0,  1.0,  1.0,
-			 1.0,  1.0, -1.0,
-			// left
-			-1.0, -1.0, -1.0,
-			-1.0, -1.0,  1.0,
-			-1.0,  1.0, -1.0,
-			-1.0,  1.0,  1.0,
-			// top
-			-1.0,  1.0,  1.0,
-			 1.0,  1.0,  1.0,
-			-1.0,  1.0, -1.0,
-			 1.0,  1.0, -1.0,
-			// bottom
-			-1.0, -1.0, -1.0,
-			 1.0, -1.0, -1.0,
-			-1.0, -1.0,  1.0,
-			 1.0, -1.0,  1.0
-  ],
-  "colors": [
-			// front
-			0.0,  0.0,  1.0, // blue
-			1.0,  0.0,  1.0, // magenta
-			0.0,  1.0,  1.0, // cyan
-			1.0,  1.0,  1.0, // white
-			// back
-			1.0,  0.0,  0.0, // red
-			0.0,  0.0,  0.0, // black
-			1.0,  1.0,  0.0, // yellow
-			0.0,  1.0,  0.0, // green
-			// right
-			1.0,  0.0,  1.0, // magenta
-			1.0,  0.0,  0.0, // red
-			1.0,  1.0,  1.0, // white
-			1.0,  1.0,  0.0, // yellow
-			// left
-			0.0,  0.0,  0.0, // black
-			0.0,  0.0,  1.0, // blue
-			0.0,  1.0,  0.0, // green
-			0.0,  1.0,  1.0, // cyan
-			// top
-			0.0,  1.0,  1.0, // cyan
-			1.0,  1.0,  1.0, // white
-			0.0,  1.0,  0.0, // green
-			1.0,  1.0,  0.0, // yellow
-			// bottom
-			0.0,  0.0,  0.0, // black
-			1.0,  0.0,  0.0, // red
-			0.0,  0.0,  1.0, // blue
-			1.0,  0.0,  1.0  // magenta
-  ],
-  "normals": [
-			// front
-			 0.0,  0.0,  1.0, // forward
-			 0.0,  0.0,  1.0, // forward
-			 0.0,  0.0,  1.0, // forward
-			 0.0,  0.0,  1.0, // forward
-			// back
-			 0.0,  0.0, -1.0, // backward
-			 0.0,  0.0, -1.0, // backward
-			 0.0,  0.0, -1.0, // backward
-			 0.0,  0.0, -1.0, // backward
-			// right
-			 1.0,  0.0,  0.0, // right
-			 1.0,  0.0,  0.0, // right
-			 1.0,  0.0,  0.0, // right
-			 1.0,  0.0,  0.0, // right
-			// left
-			-1.0,  0.0,  0.0, // left
-			-1.0,  0.0,  0.0, // left
-			-1.0,  0.0,  0.0, // left
-			-1.0,  0.0,  0.0, // left
-			// top
-			 0.0,  1.0,  0.0, // up
-			 0.0,  1.0,  0.0, // up
-			 0.0,  1.0,  0.0, // up
-			 0.0,  1.0,  0.0, // up
-			// bottom
-			 0.0, -1.0,  0.0, // down
-			 0.0, -1.0,  0.0, // down
-			 0.0, -1.0,  0.0, // down
-			 0.0, -1.0,  0.0  // down
-  ],
-  "vertex_shader_source": "uniform mat4 modelviewMatrix;\nuniform mat4 modelviewprojectionMatrix;\nuniform mat3 normalMatrix;\n\nattribute vec4 in_position;\nattribute vec3 in_normal;\nattribute vec4 in_color;\n\nvec4 lightSource = vec4(2.0, 2.0, 20.0, 0.0);\n\nvarying vec4 vVaryingColor;\n\nvoid main()\n{\ngl_Position = modelviewprojectionMatrix * in_position;\nvec3 vEyeNormal = normalMatrix * in_normal;\nvec4 vPosition4 = modelviewMatrix * in_position;\nvec3 vPosition3 = vPosition4.xyz / vPosition4.w;\nvec3 vLightDir = normalize(lightSource.xyz - vPosition3);\nfloat diff = max(0.0, dot(vEyeNormal, vLightDir));\n    vVaryingColor = vec4(diff * in_color.rgb, 1.0);\n}",
-  "fragment_shader_source": "precision mediump float;\nvarying vec4 vVaryingColor;\n\nvoid main()\n{gl_FragColor = vVaryingColor;\n}\n"
-}
+[{
+  "type":2,
+  "format":3,
+  "transform":1,
+  "resourcePath":"./image.bmp",
+  "source": {
+    "width":10,
+    "height":10,
+    "crop": {
+      "x":1,
+      "y":1,
+      "width":30,
+      "height":50
+    }
+  },
+  "frame": {
+    "x":1,
+    "y":1,
+    "width":30,
+    "height":50
+  }
+},{
+  "type":0,
+  "format":1,
+  "transform":1,
+  "resourcePath":1,
+  "source": {
+    "width":10,
+    "height":10,
+    "crop": {
+      "x":1,
+      "y":1,
+      "width":30,
+      "height":50
+    }
+  },
+  "frame": {
+    "x":1,
+    "y":1,
+    "width":30,
+    "height":50
+  }
+}]

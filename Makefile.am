@@ -39,10 +39,16 @@ kmscube_CFLAGS = \
 	$(EGL_CFLAGS) \
 	$(GLES2_CFLAGS)
 
-LDFLAGS = -L./third_party/json-c -ljson-c
-
-CFLAGS = -I./third_party/json-c
+CPPFLAGS = \
+	-O0 -g -lm \
+	$(DRM_CFLAGS) \
+	$(GBM_CFLAGS) \
+	$(EGL_CFLAGS) \
+	$(GLES2_CFLAGS) \
+        -I./third_party/json-c
+LDFLAGS += -L./third_party/json-c -ljson-c
 
 kmscube_SOURCES = \
-	kmscube.c \
-	esTransform.c
+	kmscube.cc \
+	esTransform.c \
+	layerfromjson.cc
